@@ -1,0 +1,34 @@
+$RG1         = "Management-RG"
+$VNet1       = "Management-vnet"
+$Location1   = "East US2"
+
+$gwpip = New-AzPublicIpAddress -Name Management-gatewayIP -ResourceGroupName $RG1 -Location $Location1 -AllocationMethod Dynamic
+$vnet = Get-AzVirtualNetwork -Name Management-vnet -ResourceGroupName $RG1
+$subnet   = Get-AzVirtualNetworkSubnetConfig -Name 'GatewaySubnet' -VirtualNetwork $vnet
+$gwipconf = New-AzVirtualNetworkGatewayIpConfig -Name Managementgw-IP -Subnet $subnet -PublicIpAddress $gwpip
+$gateway1 = New-AzVirtualNetworkGateway -Name Managementazure-gateway -ResourceGroupName $RG1 -Location $Location1 -IpConfigurations $gwipconf -GatewayType Vpn -VpnType RouteBased -GatewaySku VpnGw1
+
+$local = New-AzLocalNetworkGateway -Name Onprem-Site -ResourceGroupName Management-RG -Location 'East US2' -GatewayIpAddress '23.99.221.164' -AddressPrefix @('10.101.0.0/24','10.101.1.0/24')
+
+New-AzVirtualNetworkGatewayConnection -Name ManagementVNETtoOnprem -ResourceGroupName $RG1 -Location $Location1 -VirtualNetworkGateway1 $gateway1 -LocalNetworkGateway2 $local -ConnectionType IPsec -RoutingWeight 10 -SharedKey 'abc123'
+
+#Create VNET peering
+
+Management-vnet and EastUS2-vnet
+
+$mgmt = Get-AzVirtualNetwork -Name Management-vnet -ResourceGroupName "Management-RG"
+$eastus2 = Get-AzVirtualNetwork -Name East-vnet -ResourceGroupName "EastUS2-RG"
+$japan = Get-AzVirtualNetwork -Name Japane-vnet -ResourceGroupName "japane-RG"
+$NorthEurope = Get-AzVirtualNetwork -Name NorthEurope-vnet -ResourceGroupName "NorthEurope-RG"
+
+
+
+Add-AzVirtualNetworkPeering -Name ManagementtoEastUS2  -VirtualNetwork $mgmt -RemoteVirtualNetworkId $eastus2.Id
+Add-AzVirtualNetworkPeering -Name EastUS2toManagement -VirtualNetwork $eastus2 -RemoteVirtualNetworkId $mgmt.Id
+
+Add-AzVirtualNetworkPeering -Name ManagementtoJapan  -VirtualNetwork $mgmt -RemoteVirtualNetworkId $japan.Id
+Add-AzVirtualNetworkPeering -Name JapantoManagement -VirtualNetwork $japan -RemoteVirtualNetworkId $mgmt.Id
+
+
+Add-AzVirtualNetworkPeering -Name ManagementtoEastUS2  -VirtualNetwork $mgmt -RemoteVirtualNetworkId $NorthEurope.Id
+Add-AzVirtualNetworkPeering -Name EastUS2toManagement -VirtualNetwork $NorthEurope -RemoteVirtualNetworkId $mgmt.Id
